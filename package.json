@@ -1,0 +1,19 @@
+{
+  "name": "mini-react",
+  "version": "2.0.0",
+  "description": "master react",
+  "jest": {
+    "testRegex": "/scripts/jest/dont-run-jest-directly\\.js$"
+  },
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "maomao",
+  "license": "ISC",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "vitest": "^0.22.1"
+  }
+}
