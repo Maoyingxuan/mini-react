@@ -1,5 +1,5 @@
-import { getCurrentTime, isObject } from '../../shared/utils';
-import { peek } from './SchedulerMinHeap';
+import { getCurrentTime, isFn, isObject } from '../../shared/utils';
+import { peek,pop } from './SchedulerMinHeap';
 import { PriorityLevel,getTimeoutByPriorityLevel } from './SchedulerPriorities';
 type Callback = any
 //任务
@@ -20,6 +20,7 @@ let isHostTimeoutScheduled: boolean = false;
 // 在调度任务
 let isHostCallbackScheduled = false;
 let taskTimeoutID: number = -1;
+let currentTask: Task | null = null
 //取消倒计时
 function cancelHostTimeout(){
     clearTimeout(taskIdCounter)
@@ -36,9 +37,9 @@ function advanceTimers(currentTime:number){
     let timer:Task = peek(timerQueue) as Task
     while(timer){
         if(timer.callback == null){ //无效任务
-            timerQueue.pop()
+            pop(timerQueue)
         }else if(timer.startTime < currentTime){
-            timerQueue.pop()
+            pop(timerQueue)
             timer.sortIndex = timer.expirationTime
             taskQueue.push(timer)
         }else{
@@ -68,8 +69,39 @@ function requestHostCallback(callback:Callback){
 
 }
 //todo
-function flushWork(){
-    
+function flushWork(){ 
+
+}
+//时间切片，在当前时间切片循环任务
+function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaining = 有无剩余时间
+    let currentTime = initialTime
+    advanceTimers(currentTime)
+    currentTask = peek(taskQueue) as Task
+    while(currentTask !== null){
+        if(currentTask.expirationTime > currentTime && !hasTimeRemaining){
+            break
+        }
+        const callback = currentTask.callback
+        if(isFn(callback)){
+            currentTask.callback = null  //防止其他地方会调到
+            const didUserCallback = currentTask.expirationTime <= currentTime
+            const continuationCallback = callback(didUserCallback)
+            currentTime = getCurrentTime()
+            if(isFn(continuationCallback)){
+                //任务没有执行完
+                currentTask.callback = continuationCallback
+                advanceTimers(currentTime)
+            }else{
+                if(currentTask === peek(taskQueue)){
+                    pop(taskQueue)
+                }
+            }
+        }else{
+            pop(taskQueue)
+        }
+        advanceTimers(currentTime)
+    }
+    currentTask = peek(taskQueue) as Task
 }
 export function scheduleCallback(
     priorityLevel:PriorityLevel,
