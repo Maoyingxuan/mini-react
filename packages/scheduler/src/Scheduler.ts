@@ -1,6 +1,6 @@
 import { getCurrentTime, isFn, isObject } from '../../shared/utils';
-import { peek,pop } from './SchedulerMinHeap';
-import { PriorityLevel,getTimeoutByPriorityLevel } from './SchedulerPriorities';
+import { peek,pop,push } from './SchedulerMinHeap';
+import { NormalPriority, PriorityLevel,getTimeoutByPriorityLevel } from './SchedulerPriorities';
 type Callback = any
 //任务
 export interface Task {
@@ -15,12 +15,14 @@ export interface Task {
 const taskQueue: Array<Task> = []; //立即执行任务，无delay
 const timerQueue: Array<Task> = [];  // 延迟任务，有delay
 let taskIdCounter: number = 1;
+let currentPriorityLevel: PriorityLevel = NormalPriority
 // 在计时
 let isHostTimeoutScheduled: boolean = false;
 // 在调度任务
 let isHostCallbackScheduled = false;
 let taskTimeoutID: number = -1;
 let currentTask: Task | null = null
+let isPerformingWork = false
 //取消倒计时
 function cancelHostTimeout(){
     clearTimeout(taskIdCounter)
@@ -41,7 +43,7 @@ function advanceTimers(currentTime:number){
         }else if(timer.startTime < currentTime){
             pop(timerQueue)
             timer.sortIndex = timer.expirationTime
-            taskQueue.push(timer)
+            push(taskQueue,timer)
         }else{
             return
         }
@@ -69,8 +71,21 @@ function requestHostCallback(callback:Callback){
 
 }
 //todo
-function flushWork(){ 
-
+function flushWork(hasTimeRemaining:boolean, initialTime:number){ 
+    isHostCallbackScheduled = false
+    if(isHostTimeoutScheduled){
+        isHostTimeoutScheduled = false
+        cancelHostTimeout()
+    }
+    isPerformingWork = true
+    let previousPriorityLevel = currentPriorityLevel
+    try{
+        return workLoop(hasTimeRemaining,initialTime)
+    }finally{
+        currentPriorityLevel = previousPriorityLevel
+        currentTask = null
+        isPerformingWork = false
+    }
 }
 //时间切片，在当前时间切片循环任务
 function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaining = 有无剩余时间
@@ -82,6 +97,7 @@ function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaini
             break
         }
         const callback = currentTask.callback
+        currentPriorityLevel = currentTask.priorityLevel
         if(isFn(callback)){
             currentTask.callback = null  //防止其他地方会调到
             const didUserCallback = currentTask.expirationTime <= currentTime
@@ -95,13 +111,23 @@ function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaini
                 if(currentTask === peek(taskQueue)){
                     pop(taskQueue)
                 }
+            advanceTimers(currentTime)
             }
         }else{
             pop(taskQueue)
         }
-        advanceTimers(currentTime)
+    currentTask = peek(taskQueue) as Task    
     }
-    currentTask = peek(taskQueue) as Task
+    // 判断还有没有其他的任务
+    if (currentTask !== null) {
+        return true;
+    } else {
+        const firstTimer = peek(timerQueue) as Task;
+        if (firstTimer !== null) {
+        requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+        }
+        return false;
+    }
 }
 export function scheduleCallback(
     priorityLevel:PriorityLevel,
@@ -133,7 +159,7 @@ export function scheduleCallback(
     }
     if(startTime > currentTime){  //任务延迟
         newTask.sortIndex = startTime
-        timerQueue.push(newTask)
+        push(timerQueue,newTask)
         if(peek(taskQueue) === null && newTask === peek(timerQueue)){
             if (isHostTimeoutScheduled) {
                 cancelHostTimeout();
@@ -144,6 +170,10 @@ export function scheduleCallback(
         }
     }else{ //任务不延迟
         newTask.sortIndex = expirationTime
-        taskQueue.push(newTask)
+        push(taskQueue,newTask)
+    }
+    if(!isHostCallbackScheduled && !isPerformingWork){
+        isHostCallbackScheduled = true
+        requestHostCallback(flushWork)
     }
 }
