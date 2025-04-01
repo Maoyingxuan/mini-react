@@ -11,6 +11,7 @@ export interface Task {
     expirationTime: number;
     sortIndex: number;
 }
+type HostCallback = (hasTimeRemaining:boolean,currentTime:number) => true
 // 任务存储，最小堆
 const taskQueue: Array<Task> = []; //立即执行任务，无delay
 const timerQueue: Array<Task> = [];  // 延迟任务，有delay
@@ -23,6 +24,9 @@ let isHostCallbackScheduled = false;
 let taskTimeoutID: number = -1;
 let currentTask: Task | null = null
 let isPerformingWork = false
+let scheduleHostCallback: HostCallback | null = null
+let isMessageLoopRunning = false
+let schedulePerformWorkUntilDeadline: Function
 //取消倒计时
 function cancelHostTimeout(){
     clearTimeout(taskIdCounter)
@@ -66,11 +70,44 @@ function handleTimeout(currentTime:number){
         }
     }
 }
-//todo
+
+const  performWorkUntilDeadline = () => {
+    if(scheduleHostCallback!==null){
+        const currentTime = getCurrentTime()
+        const hasTimeRemaining = true
+        let hasOtherWork = true
+        try{
+            hasOtherWork = scheduleHostCallback(hasTimeRemaining,currentTime)
+        }finally{
+            if(hasOtherWork){
+
+            }else{
+                isMessageLoopRunning = false
+                scheduleHostCallback = null
+            }
+        }
+    }else{
+        isMessageLoopRunning = false
+    }
+}
+const channel = new MessageChannel();
+
+const port = channel.port2;
+
+channel.port1.onmessage = performWorkUntilDeadline;
+
+schedulePerformWorkUntilDeadline =() =>{
+    port.postMessage(null)
+}
 function requestHostCallback(callback:Callback){
+    scheduleHostCallback = callback
+    if(!isMessageLoopRunning){
+        isMessageLoopRunning = true
+        schedulePerformWorkUntilDeadline();
+    }
 
 }
-//todo
+
 function flushWork(hasTimeRemaining:boolean, initialTime:number){ 
     isHostCallbackScheduled = false
     if(isHostTimeoutScheduled){
