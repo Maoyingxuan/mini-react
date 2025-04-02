@@ -27,6 +27,15 @@ let isPerformingWork = false
 let scheduleHostCallback: HostCallback | null = null
 let isMessageLoopRunning = false
 let schedulePerformWorkUntilDeadline: Function
+let frameInterval = 5
+let startTime = -1
+function shouldYieldToHost(){ //要不要交还主线程
+    const timeElapsed = getCurrentTime() - startTime
+    if(timeElapsed < frameInterval){
+        return false
+    }
+    return true
+}
 //取消倒计时
 function cancelHostTimeout(){
     clearTimeout(taskIdCounter)
@@ -34,7 +43,7 @@ function cancelHostTimeout(){
 }
 //开始倒计时
 function requestHostTimeout(callback:Callback,ms:number){
-    taskIdCounter = setTimeout(()=>{
+    setTimeout(()=>{
         callback(getCurrentTime())
     },ms)
 }
@@ -74,6 +83,7 @@ function handleTimeout(currentTime:number){
 const  performWorkUntilDeadline = () => {
     if(scheduleHostCallback!==null){
         const currentTime = getCurrentTime()
+        startTime = currentTime
         const hasTimeRemaining = true
         let hasOtherWork = true
         try{
@@ -130,7 +140,7 @@ function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaini
     advanceTimers(currentTime)
     currentTask = peek(taskQueue) as Task
     while(currentTask !== null){
-        if(currentTask.expirationTime > currentTime && !hasTimeRemaining){
+        if(currentTask.expirationTime > currentTime && (!hasTimeRemaining || shouldYieldToHost())){
             break
         }
         const callback = currentTask.callback
