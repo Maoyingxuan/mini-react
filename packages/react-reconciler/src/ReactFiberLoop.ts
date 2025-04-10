@@ -3,7 +3,7 @@ import { createFiberFromElement } from "./ReactFiber";
 import { FiberRoot,Fiber } from "./ReactInternalTypes";
 import {NormalPriority, Scheduler} from '../../scheduler'
 import {beginwork} from './ReactFiberBeginWork'
-import {HostComponent,HostRoot} from './ReactWorkTags'
+import {HostComponent,HostRoot,HostText} from './ReactWorkTags'
 import {Placement} from './ReactFiberFlags'
 //current  更新完的
 let workInProgress: Fiber | null = null; //正在工作当中的
@@ -98,7 +98,9 @@ function commitPlacement(finishedWork:Fiber){
     const parentFiber = getHostParentFiber(finishedWork)
     // 获取父dom节点
     const parent = parentFiber.stateNode;
-    if (finishedWork.stateNode) {
+    if (finishedWork.stateNode &&
+      (finishedWork.tag === HostText || finishedWork.tag === HostComponent)
+    ) {
       parent.appendChild(finishedWork.stateNode);
     }
 }

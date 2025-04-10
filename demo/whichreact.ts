@@ -3,5 +3,5 @@ import React, { useReducer } from "react";
 
 // import { useReducer } from "../src/react";
 import ReactDOM from "../packages/react-dom/src/client";
-
-export { ReactDOM, useReducer };
+import { Component } from "react";
+export { ReactDOM, useReducer,Component };

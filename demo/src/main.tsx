@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 // import { createRoot } from 'react-dom/client'
 
 import './index.css'
-import { ReactDOM } from '../whichreact.ts'
+import { ReactDOM, Component } from '../whichreact.ts'
 function FunctionComponent(props: {name: string}) {
 return (
   <div
@@ -13,12 +13,28 @@ return (
   </div>
 );
 }
+class ClassComponent extends Component{
+  render(){
+    return(
+      <div className='border'>
+        <h3>{this.props.name}</h3>
+      </div>
+    )
+  }
+}
 const jsx = (
   <div className="border">
     <h1>react</h1>
     <a>mini react</a>
     <FunctionComponent name="函数组件" />
-    {/* <ClassComponent name="类组件" /> */}
+    <ClassComponent name="类组件" />
+    111
+    <ul>
+      <>
+      <li>1</li>
+      <li>2</li>
+      </>
+    </ul>
     {/* <FragmentComponent /> */}
   </div>
 );
