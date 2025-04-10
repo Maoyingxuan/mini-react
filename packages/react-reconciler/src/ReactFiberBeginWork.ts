@@ -1,6 +1,6 @@
 import {createFiberFromElement} from "./ReactFiber";
 import { Fiber } from "./ReactInternalTypes";
-import { HostComponent, HostRoot } from "./ReactWorkTags";
+import { FunctionComponent, HostComponent, HostRoot } from "./ReactWorkTags";
 import {Placement} from "./ReactFiberFlags";
 import {isStr} from "../../shared/utils";
 export function beginwork (current:Fiber|null,workInProgress:Fiber) { //处理fiber,返回子节点
@@ -9,6 +9,8 @@ export function beginwork (current:Fiber|null,workInProgress:Fiber) { //处理fi
             return updateHostRoot(current,workInProgress)
         case HostComponent:
             return updateHostComponent(current,workInProgress)
+        case FunctionComponent:
+          return updateFunctionComponent(current,workInProgress)
     }
 }
 function updateHostRoot(current:Fiber|null,workInProgress:Fiber){
@@ -36,7 +38,13 @@ function updateHostComponent(current:Fiber|null,workInProgress:Fiber){
       );
       return workInProgress.child;
 }
+function updateFunctionComponent(current:Fiber|null,workInProgress:Fiber):Fiber|null{
+  const {type,pendingProps} = workInProgress
+  const chindren = type(pendingProps)
+  workInProgress.child = reconcileChildren(current,workInProgress,chindren)
+  return workInProgress.child
 
+}
 function reconcileChildren(current:Fiber|null,workInProgress:Fiber,nextChildren:any):Fiber|null{
     //返回child (第一个子fiber) + 构建Fiber
     const newChildren = Array.isArray(nextChildren)

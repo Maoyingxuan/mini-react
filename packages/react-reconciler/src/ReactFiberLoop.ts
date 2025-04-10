@@ -3,7 +3,7 @@ import { createFiberFromElement } from "./ReactFiber";
 import { FiberRoot,Fiber } from "./ReactInternalTypes";
 import {NormalPriority, Scheduler} from '../../scheduler'
 import {beginwork} from './ReactFiberBeginWork'
-import {HostComponent} from './ReactWorkTags'
+import {HostComponent,HostRoot} from './ReactWorkTags'
 import {Placement} from './ReactFiberFlags'
 //current  更新完的
 let workInProgress: Fiber | null = null; //正在工作当中的
@@ -43,11 +43,11 @@ function commitRoot(){
       workInProgress = null;
 }
 function commitMutationEffects(finishedWork: Fiber, root: FiberRoot) {
-    switch (finishedWork.tag) {
-      case HostComponent:
+    // switch (finishedWork.tag) {
+    //   case HostComponent:
         recursivelyTraverseMutationEffects(root, finishedWork);
         commitReconciliationEffects(finishedWork);
-    }
+    // }
   }
 function completeUnitOfWork(unitOfWork:Fiber){
     //兄弟 - 叔叔 -爷爷
@@ -95,10 +95,23 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   }
 function commitPlacement(finishedWork:Fiber){
     //Dom上子节点插入父节点
-    const parentFiber = finishedWork.return;
+    const parentFiber = getHostParentFiber(finishedWork)
     // 获取父dom节点
     const parent = parentFiber.stateNode;
     if (finishedWork.stateNode) {
       parent.appendChild(finishedWork.stateNode);
     }
+}
+function getHostParentFiber(fiber:Fiber):Fiber{
+  let parent = fiber.return
+  while(parent!==null){
+    if(isHostParent(parent)){
+      return parent
+    }else{
+      parent = parent.return
+    }
+  }
+}
+function isHostParent(fiber:Fiber):boolean{
+  return fiber.tag === HostComponent || fiber.tag === HostRoot;
 }
