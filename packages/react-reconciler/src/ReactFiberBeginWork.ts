@@ -2,7 +2,9 @@ import {createFiberFromElement, createFiberFromText} from "./ReactFiber";
 import { Fiber } from "./ReactInternalTypes";
 import { ClassComponent, Fragment, FunctionComponent, HostComponent, HostRoot, HostText } from "./ReactWorkTags";
 import {Placement} from "./ReactFiberFlags";
-import {isStr} from "../../shared/utils";
+import {isNum, isStr} from "../../shared/utils";
+import {renderHooks} from "./ReactFiberHooks"
+import {reconcileChildren} from "./ReactChildFiber"
 export function beginwork (current:Fiber|null,workInProgress:Fiber) { //处理fiber,返回子节点
     switch(workInProgress.tag){
         case HostRoot:
@@ -27,7 +29,7 @@ function updateHostComponent(current:Fiber|null,workInProgress:Fiber){
     if(!workInProgress.stateNode){
         workInProgress.stateNode = document.createElement(type)
         //更新属性
-        updateNode(workInProgress.stateNode, workInProgress.pendingProps);
+        updateNode(workInProgress.stateNode,{}, workInProgress.pendingProps);
     }
     //返回子节点，此时是数组，需要创造成fiber单链表
     let nextChildren = workInProgress.pendingProps.children
@@ -45,6 +47,7 @@ function updateHostComponent(current:Fiber|null,workInProgress:Fiber){
       return workInProgress.child;
 }
 function updateFunctionComponent(current:Fiber|null,workInProgress:Fiber):Fiber|null{
+  renderHooks(workInProgress)
   const {type,pendingProps} = workInProgress
   const children = type(pendingProps)
   workInProgress.child = reconcileChildren(current,workInProgress,children)
@@ -66,43 +69,46 @@ function updateHostText(current:Fiber|null,workInProgress:Fiber):Fiber|null{
   return null;
 }
 function updateFragment(current:Fiber|null,workInProgress:Fiber):Fiber|null{
-  workInProgress.child = reconcileChildren(current, workInProgress, workInProgress.pendingProps.children)
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress, 
+    workInProgress.pendingProps.children)
   return workInProgress.child
 }
-function reconcileChildren(current:Fiber|null,workInProgress:Fiber,nextChildren:any):Fiber|null{
-    //返回child (第一个子fiber) + 构建Fiber
-    const newChildren = Array.isArray(nextChildren)
-    ? nextChildren
-    : [nextChildren];
+// function _reconcileChildren(current:Fiber|null,workInProgress:Fiber,nextChildren:any):Fiber|null{
+//     //返回child (第一个子fiber) + 构建Fiber
+//     const newChildren = Array.isArray(nextChildren)
+//     ? nextChildren
+//     : [nextChildren];
 
-  let newIndex = 0;
-  let resultingFirstChild = null;
-  let previousNewFiber = null;
-  for (; newIndex < newChildren.length; newIndex++) {
-    const newChild = newChildren[newIndex];
-    if (newChild == null) {
-      continue;
-    }
+//   let newIndex = 0;
+//   let resultingFirstChild:Fiber|null = null;
+//   let previousNewFiber:Fiber|null = null;
+//   for (; newIndex < newChildren.length; newIndex++) {
+//     const newChild = newChildren[newIndex];
+//     if (newChild == null) {
+//       continue;
+//     }
 
-    // const newFiber = createFiberFromElement(newChild, workInProgress);
-    let newFiber: Fiber
-    if(isStr(newChild)){
-      newFiber = createFiberFromText(newChild, workInProgress)
-    }else{
-      newFiber = createFiberFromElement(newChild, workInProgress)
-    }
-    // 初次渲染
-    newFiber.flags = Placement;
-    if (previousNewFiber === null) {
-      resultingFirstChild = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
-    }
-    previousNewFiber = newFiber;
-  }
+//     // const newFiber = createFiberFromElement(newChild, workInProgress);
+//     let newFiber: Fiber
+//     if(isStr(newChild)){
+//       newFiber = createFiberFromText(newChild, workInProgress)
+//     }else{
+//       newFiber = createFiberFromElement(newChild, workInProgress)
+//     }
+//     // 初次渲染
+//     newFiber.flags = Placement;
+//     if (previousNewFiber === null) {
+//       resultingFirstChild = newFiber;
+//     } else {
+//       previousNewFiber.sibling = newFiber;
+//     }
+//     previousNewFiber = newFiber;
+//   }
 
-  return resultingFirstChild;
-}
+//   return resultingFirstChild;
+// }
 
 function shouldSetTextContent(type: string, props: any): boolean {
     return (
@@ -115,18 +121,40 @@ function shouldSetTextContent(type: string, props: any): boolean {
         props.dangerouslySetInnerHTML.__html != null)
     );
   }
-function updateNode(dom:any,nextVal:any){
-    Object.keys(nextVal).forEach((k)=>{
+  export function updateNode(node, prevVal, nextVal) {
+    Object.keys(prevVal)
+      // .filter(k => k !== "children")
+      .forEach((k) => {
         if (k === "children") {
-            // 子节点、文本
-            if (isStr(nextVal[k])) {
-              dom.textContent = nextVal[k];
-            }
-          } else {
-            // 普通属性，不包括style
-            dom[k] = nextVal[k];
+          // 有可能是文本
+          if (isStr(nextVal[k]) || isNum(nextVal[k])) {
+            node.textContent = "";
           }
-    })
-}
+        } else if (k.slice(0, 2) === "on") {
+          const eventName = k.slice(2).toLocaleLowerCase();
+          node.removeEventListener(eventName, prevVal[k]);
+        } else {
+          if (!(k in nextVal)) {
+            node[k] = "";
+          }
+        }
+      });
+  
+    Object.keys(nextVal)
+      // .filter(k => k !== "children")
+      .forEach((k) => {
+        if (k === "children") {
+          // 有可能是文本
+          if (isStr(nextVal[k]) || isNum(nextVal[k])) {
+            node.textContent = nextVal[k] + "";
+          }
+        } else if (k.slice(0, 2) === "on") {
+          const eventName = k.slice(2).toLocaleLowerCase();
+          node.addEventListener(eventName, nextVal[k]);
+        } else {
+          node[k] = nextVal[k];
+        }
+      });
+  }
 
 

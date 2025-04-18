@@ -2,9 +2,9 @@ import { ReactElement } from "../../shared/ReactTypes";
 import { createFiberFromElement } from "./ReactFiber";
 import { FiberRoot,Fiber } from "./ReactInternalTypes";
 import {NormalPriority, Scheduler} from '../../scheduler'
-import {beginwork} from './ReactFiberBeginWork'
+import {beginwork, updateNode} from './ReactFiberBeginWork'
 import {HostComponent,HostRoot,HostText} from './ReactWorkTags'
-import {Placement} from './ReactFiberFlags'
+import {Placement,Update} from './ReactFiberFlags'
 //current  更新完的
 let workInProgress: Fiber | null = null; //正在工作当中的
 let workInProgressRoot: FiberRoot | null = null;
@@ -13,7 +13,7 @@ export function updateContainer(element:ReactElement,root:FiberRoot){
     root.current.child = createFiberFromElement(element,root.current)
     scheduleUpdateOnFiber(root, root.current)
 }
-function scheduleUpdateOnFiber(root:FiberRoot,fiber:Fiber){ //调度fiber更新
+export function scheduleUpdateOnFiber(root:FiberRoot,fiber:Fiber){ //调度fiber更新
     workInProgress = fiber
     workInProgressRoot = root
     Scheduler.scheduleCallback(NormalPriority,workLoop)
@@ -90,6 +90,12 @@ function commitReconciliationEffects(finishedWork: Fiber) {
     const flags = finishedWork.flags;
     if (flags & Placement) {
       commitPlacement(finishedWork);
+      finishedWork.flags &= ~Placement;
+    }
+    if(flags & Update){
+      if(finishedWork.stateNode && finishedWork.tag === HostComponent){
+        updateNode(finishedWork.stateNode,finishedWork.alternate.pendingProps,finishedWork.pendingProps)
+      }
       finishedWork.flags &= ~Placement;
     }
   }
