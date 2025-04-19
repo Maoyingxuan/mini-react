@@ -2,6 +2,7 @@
 import {scheduleUpdateOnFiber} from './ReactFiberLoop'
 import { Fiber, FiberRoot } from './ReactInternalTypes';
 import { HostRoot } from './ReactWorkTags';
+import { isFn } from '../../shared/utils';
 //获取当前正在执行的函数组件Fiber
 type Hook = {
     memorizedState: any,
@@ -60,7 +61,9 @@ export function useReducer(reducer: Function, initialState: any) {
   // console.log(hook);
   return [hook.memorizedState, dispatch];
 }
-
+export function useState(initialState: any) {
+  return useReducer(null, isFn(initialState) ? initialState() : initialState);
+}
 function getRootForFiber(sourceFiber:Fiber):FiberRoot{    
     let node = sourceFiber
     let parent = node.return
