@@ -21,6 +21,7 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
   const shouldTrackSideEffects = !! returnFiber.alternate
   //1.比较新老节点，如果可以复用，继续往右否则停止
   for(; oldFiber && (newIndex < newChildren.length);newIndex++){
+    // console.log('step1');
     const newChild = newChildren[newIndex]
     if(newChild == null){
       continue
@@ -32,6 +33,8 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
     }else{
       nextOldFiber = oldFiber.sibling
     }
+    // console.log(newChild,oldFiber)
+    // console.log(sameNode(newChild,oldFiber));
     if(!sameNode(newChild,oldFiber)){
       if(oldFiber == null){
         oldFiber = nextOldFiber
@@ -65,11 +68,13 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
   }
   //2.新节点没了，删老节点
   if(newIndex == newChildren.length){
+    // console.log('step2');
     deleteRemainingChildren(returnFiber,oldFiber)
     return resultingFirstChild
   }
   //3.老节点没了，插入新节点（初次渲染）
   if (!oldFiber) {
+    // console.log('step3');
     for (; newIndex < newChildren.length; newIndex++) {
       const newChild = newChildren[newIndex];
       if (newChild == null) {
@@ -103,6 +108,7 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
   const existingChildren = mapRemainingChildren(oldFiber);
   //4.2 遍历新节点，通过新节点的key去哈希表中查找节点，找到就复用节点，并且删除哈希表中对应的节点
   for (; newIndex < newChildren.length; newIndex++) {
+    // console.log('step4');
     const newChild = newChildren[newIndex];
     if (newChild == null) {
       continue;
@@ -115,7 +121,7 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
       newFiber = createFiberFromElement(newChild, returnFiber);
     }
     // oldFiber
-    const matchedFiber = existingChildren.get(newFiber.key || newFiber.index);
+    const matchedFiber = existingChildren.get(newFiber.key || newIndex);
     if (matchedFiber) {
       // 节点复用
       Object.assign(newFiber, {
@@ -124,7 +130,10 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
         flags: Update,
       });
 
-      existingChildren.delete(newFiber.key || newFiber.index);
+      existingChildren.delete(newFiber.key || newIndex);
+    }
+    else{
+      newFiber.flags = Placement
     }
 
     lastPlacedIndex = placeChild(
@@ -143,6 +152,7 @@ export function reconcileChildren(current:Fiber|null,returnFiber:Fiber,nextChild
 }
 //5 old的哈希表中还有值，遍历哈希表删除所有old
 if (shouldTrackSideEffects) {
+  // console.log('step5');
   existingChildren.forEach((child) => deleteChild(returnFiber, child));
 }
   return resultingFirstChild 

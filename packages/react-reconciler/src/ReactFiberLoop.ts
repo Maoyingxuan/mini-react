@@ -85,7 +85,7 @@ function recursivelyTraverseMutationEffects(
   }
 
 // fiber.flags
-// 新增插入、移动位置、更新属性
+// 新增插入、移动位置、更新属性 ++ 删除属性
 function commitReconciliationEffects(finishedWork: Fiber) {
     const flags = finishedWork.flags;
     if (flags & Placement) {
@@ -98,18 +98,59 @@ function commitReconciliationEffects(finishedWork: Fiber) {
       }
       finishedWork.flags &= ~Placement;
     }
+    if (finishedWork.deletions) {
+      // parentFiber 是 deletions 的父dom节点对应的fiber
+      const parentFiber = isHostParent(finishedWork)
+        ? finishedWork
+        : getHostParentFiber(finishedWork);
+      const parent = parentFiber.stateNode;
+      commitDeletions(finishedWork.deletions, parent);
+      finishedWork.deletions = null;
+    }
   }
-function commitPlacement(finishedWork:Fiber){
-    //Dom上子节点插入父节点
-    const parentFiber = getHostParentFiber(finishedWork)
-    // 获取父dom节点
-    const parent = parentFiber.stateNode;
-    if (finishedWork.stateNode &&
+  function commitDeletions(deletions: Array<Fiber>, parent: Element) {
+    deletions.forEach((deletion) => {
+      // 找到deletion的dom节点
+      parent.removeChild(getStateNode(deletion));
+    });
+  }
+  function getStateNode(fiber: Fiber) {
+    let node = fiber;
+  
+    while (1) {
+      if (isHost(node) && node.stateNode) {
+        return node.stateNode;
+      }
+      node = node.child;
+    }
+  }
+  // 原生节点：原生标签、文本节点
+function isHost(fiber: Fiber) {
+  return fiber.tag === HostComponent || fiber.tag === HostText;
+}
+
+  function commitPlacement(finishedWork: Fiber) {
+    const parentFiber = getHostParentFiber(finishedWork);
+  
+    // 插入父dom
+    if (
+      finishedWork.stateNode &&
       (finishedWork.tag === HostText || finishedWork.tag === HostComponent)
     ) {
-      parent.appendChild(finishedWork.stateNode);
+      // 获取父dom节点
+      let parent = parentFiber.stateNode;
+  
+      if (parent.containerInfo) {
+        parent = parent.containerInfo;
+      }
+  
+      // dom节点
+      const before = getHostSibling(finishedWork);
+      insertOrAppendPlacementNode(finishedWork, before, parent);
+      // parent.appendChild(finishedWork.stateNode);
     }
-}
+  }
+  
 function getHostParentFiber(fiber:Fiber):Fiber{
   let parent = fiber.return
   while(parent!==null){
@@ -120,6 +161,62 @@ function getHostParentFiber(fiber:Fiber):Fiber{
     }
   }
 }
+//返回fiber的下一个兄弟节点
+function getHostSibling(fiber: Fiber) {
+  let node = fiber;
+
+  sibling: while (1) {
+    while (node.sibling === null) {
+      if (node.return === null || isHostParent(node.return)) {
+        return null;
+      }
+      node = node.return;
+    }
+
+    node.sibling.return = node.return;
+    node = node.sibling;
+
+    while (node.tag !== HostComponent && node.tag !== HostText) {
+      if (node.flags & Placement) {
+        // Placement表示节点是新增插入或者移动位置
+        continue sibling;
+      }
+
+      if (node.child === null) {
+        continue sibling;
+      } else {
+        node.child.return = node;
+        node = node.child;
+      }
+    }
+
+    if (!(node.flags & Placement)) {
+      return node.stateNode;
+    }
+  }
+}
 function isHostParent(fiber:Fiber):boolean{
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
+}
+function insertOrAppendPlacementNode(node:Fiber,before:Element,parent:Element):void{
+  const {tag} = node;
+  const isHost = tag === HostComponent || HostText;
+  if (isHost) {
+    const stateNode = node.stateNode;
+    if (before) {
+      parent.insertBefore(stateNode, before);
+    } else {
+      parent.appendChild(stateNode);
+    }
+  } else {
+    const child = node.child;
+    if (child !== null) {
+      insertOrAppendPlacementNode(child, before, parent);
+      let sibling = child.sibling;
+      while (sibling !== null) {
+        insertOrAppendPlacementNode(sibling, before, parent);
+        sibling = sibling.sibling;
+      }
+    }
+  }
 }

@@ -10,6 +10,17 @@ return (
     className="border">
     <p>{props.name}</p>
     <button onClick={()=>setCount()}>{count}</button>
+    {count % 2 ? <div>omg</div> : <span>123</span>}
+    <ul>
+        {/* <li>随着count2的奇偶性变化</li> */}
+        {count % 2 === 0
+          ? [2, 1, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })
+          : [0, 1, 2, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })}
+      </ul>
   </div>
 );
 }
