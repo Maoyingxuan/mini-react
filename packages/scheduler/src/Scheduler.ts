@@ -43,7 +43,7 @@ function cancelHostTimeout(){
 }
 //开始倒计时
 function requestHostTimeout(callback:Callback,ms:number){
-    setTimeout(()=>{
+    taskIdCounter = setTimeout(()=>{
         callback(getCurrentTime())
     },ms)
 }
@@ -90,7 +90,7 @@ const  performWorkUntilDeadline = () => {
             hasOtherWork = scheduleHostCallback(hasTimeRemaining,currentTime)
         }finally{
             if(hasOtherWork){
-
+                schedulePerformWorkUntilDeadline();
             }else{
                 isMessageLoopRunning = false
                 scheduleHostCallback = null
@@ -142,6 +142,7 @@ function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaini
     while(currentTask !== null){
         if(currentTask.expirationTime > currentTime && (!hasTimeRemaining || shouldYieldToHost())){
             break
+            
         }
         const callback = currentTask.callback
         currentPriorityLevel = currentTask.priorityLevel
