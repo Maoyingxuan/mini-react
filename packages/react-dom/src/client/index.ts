@@ -5,7 +5,7 @@ function ReactDomRoot(_internalRoot:FiberRoot){
     this._internalRoot = _internalRoot
 }
 ReactDomRoot.prototype.render = function (children){
-    console.log(children)
+    // console.log(children)
     updateContainer(children, this._internalRoot)
 }
 export const createRoot = (container: Element | Document | DocumentFragment) => {

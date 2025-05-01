@@ -144,6 +144,7 @@ function workLoop(hasTimeRemaining:boolean,initialTime:number){ //hasTimeRemaini
             break
             
         }
+        console.log('test'+currentTask.callback)
         const callback = currentTask.callback
         currentPriorityLevel = currentTask.priorityLevel
         if(isFn(callback)){

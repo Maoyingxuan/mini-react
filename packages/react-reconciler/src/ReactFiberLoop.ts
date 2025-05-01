@@ -11,6 +11,7 @@ let workInProgressRoot: FiberRoot | null = null;
 
 export function updateContainer(element:ReactElement,root:FiberRoot){
     root.current.child = createFiberFromElement(element,root.current)
+    root.current.child.flags = Placement
     scheduleUpdateOnFiber(root, root.current)
 }
 export function scheduleUpdateOnFiber(root:FiberRoot,fiber:Fiber){ //调度fiber更新
@@ -33,9 +34,7 @@ function performUnitOfWork(unitOfWork:Fiber){
     }
 }
 function commitRoot(){
-    workInProgressRoot.containerInfo.appendChild(
-        workInProgressRoot.current.child.stateNode
-      );
+
     
       commitMutationEffects(workInProgressRoot.current.child, workInProgressRoot);
     
