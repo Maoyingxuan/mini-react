@@ -3,8 +3,9 @@ import { createFiberFromElement } from "./ReactFiber";
 import { FiberRoot,Fiber } from "./ReactInternalTypes";
 import {NormalPriority, Scheduler} from '../../scheduler'
 import {beginwork, updateNode} from './ReactFiberBeginWork'
-import {HostComponent,HostRoot,HostText} from './ReactWorkTags'
+import {FunctionComponent, HostComponent,HostRoot,HostText} from './ReactWorkTags'
 import {Placement,Update} from './ReactFiberFlags'
+import { HookFlags, HookLayout } from "./ReactHookEffectTags";
 //current  更新完的
 let workInProgress: Fiber | null = null; //正在工作当中的
 let workInProgressRoot: FiberRoot | null = null;
@@ -92,10 +93,18 @@ function commitReconciliationEffects(finishedWork: Fiber) {
       finishedWork.flags &= ~Placement;
     }
     if(flags & Update){
-      if(finishedWork.stateNode && finishedWork.tag === HostComponent){
+      switch(finishedWork.tag){
+        case HostComponent:
+        if(finishedWork.stateNode && finishedWork.tag === HostComponent){
         updateNode(finishedWork.stateNode,finishedWork.alternate.pendingProps,finishedWork.pendingProps)
       }
+      break
+        case FunctionComponent:
+          commitHookEffects(finishedWork, HookLayout)
+      }
+      
       finishedWork.flags &= ~Placement;
+
     }
     if (finishedWork.deletions) {
       // parentFiber 是 deletions 的父dom节点对应的fiber
@@ -105,6 +114,24 @@ function commitReconciliationEffects(finishedWork: Fiber) {
       const parent = parentFiber.stateNode;
       commitDeletions(finishedWork.deletions, parent);
       finishedWork.deletions = null;
+    }
+  }
+  function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
+    const updateQueue = finishedWork.updateQueue;
+  
+    const lastEffect = updateQueue != null ? updateQueue.lastEffect : null;
+    if (lastEffect) {
+      const firstEffect = lastEffect.next;
+      let effect = firstEffect;
+  
+      do {
+        if ((effect.tag & hookFlags) === hookFlags) {
+          const create = effect.create;
+          effect.destroy = create();
+          // create()
+        }
+        effect = effect.next;
+      } while (effect !== firstEffect);
     }
   }
   function commitDeletions(deletions: Array<Fiber>, parent: Element) {

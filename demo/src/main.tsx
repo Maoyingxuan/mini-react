@@ -2,9 +2,16 @@
 // import { createRoot } from 'react-dom/client'
 
 import './index.css'
-import { ReactDOM, Component, useReducer } from '../whichreact.ts'
+import { ReactDOM, Component, useReducer,  useLayoutEffect } from '../whichreact.ts'
+// import { useLayoutEffect } from 'react';
 function FunctionComponent(props: {name: string}) {
   const [count,setCount] = useReducer((x)=>x+1,0)
+  useLayoutEffect(()=>{
+    console.log('useLayoutEffect')
+  },[])
+  // useEffect(()=>{
+  //   console.log('useEffect')
+  // },[])
 return (
   <div
     className="border">

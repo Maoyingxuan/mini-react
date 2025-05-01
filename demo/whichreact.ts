@@ -1,6 +1,7 @@
+// import { useLayoutEffect } from 'react';
 // import  { useReducer } from "react";
 // import * as ReactDOM from "react-dom/client"; // ✅ 官方渲染器
 import ReactDOM from "../packages/react-dom/src/client";
-import { useReducer } from "../packages/react";
+import { useReducer, useLayoutEffect, useEffect } from "../packages/react";
 import { Component } from "react";
-export { ReactDOM, useReducer,Component };
+export { ReactDOM, useReducer,Component,useLayoutEffect };
