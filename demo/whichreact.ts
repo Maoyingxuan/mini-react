@@ -4,4 +4,4 @@
 import ReactDOM from "../packages/react-dom/src/client";
 import { useReducer, useLayoutEffect, useEffect } from "../packages/react";
 import { Component } from "react";
-export { ReactDOM, useReducer,Component,useLayoutEffect };
+export { ReactDOM, useReducer,Component,useLayoutEffect,useEffect };

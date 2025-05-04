@@ -4,8 +4,8 @@ import { FiberRoot,Fiber } from "./ReactInternalTypes";
 import {NormalPriority, Scheduler} from '../../scheduler'
 import {beginwork, updateNode} from './ReactFiberBeginWork'
 import {FunctionComponent, HostComponent,HostRoot,HostText} from './ReactWorkTags'
-import {Placement,Update} from './ReactFiberFlags'
-import { HookFlags, HookLayout } from "./ReactHookEffectTags";
+import {Passive, Placement,Update} from './ReactFiberFlags'
+import { HookFlags, HookHasEffect, HookLayout, HookPassive } from "./ReactHookEffectTags";
 //current  更新完的
 let workInProgress: Fiber | null = null; //正在工作当中的
 let workInProgressRoot: FiberRoot | null = null;
@@ -35,12 +35,37 @@ function performUnitOfWork(unitOfWork:Fiber){
     }
 }
 function commitRoot(){
-
-    
       commitMutationEffects(workInProgressRoot.current.child, workInProgressRoot);
-    
+      const root = workInProgressRoot.current.child
+      Scheduler.scheduleCallback(NormalPriority,()=>{
+        flushPassiveEffects(root)
+        return null
+      })
       workInProgressRoot = null;
       workInProgress = null;
+}
+function flushPassiveEffects(finishedWork:Fiber){
+  recursivelyTraversePassiveMountEffects(finishedWork);
+  commitPassiveMountOnFiber(finishedWork);
+}
+
+function commitPassiveMountOnFiber(finishedWork: Fiber) {
+  switch (finishedWork.tag) {
+    case FunctionComponent:
+      if (finishedWork.flags & Passive) {
+        commitHookEffects(finishedWork, HookPassive | HookHasEffect);
+      }
+      finishedWork.flags &= ~Passive;
+      break;
+  }
+}
+function recursivelyTraversePassiveMountEffects(parentFiber: Fiber) {
+  let child = parentFiber.child;
+
+  while (child !== null) {
+    commitPassiveMountOnFiber(child);
+    child = child.sibling;
+  }
 }
 function commitMutationEffects(finishedWork: Fiber, root: FiberRoot) {
     // switch (finishedWork.tag) {
@@ -118,7 +143,6 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   }
   function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
     const updateQueue = finishedWork.updateQueue;
-  
     const lastEffect = updateQueue != null ? updateQueue.lastEffect : null;
     if (lastEffect) {
       const firstEffect = lastEffect.next;

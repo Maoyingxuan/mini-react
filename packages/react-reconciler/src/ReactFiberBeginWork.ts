@@ -39,11 +39,11 @@ function updateHostComponent(current:Fiber|null,workInProgress:Fiber){
         return null
     }
     workInProgress.child = reconcileChildren(current,workInProgress,nextChildren)
-    console.log(
-        "%c [  ]-47",
-        "font-size:13px; background:pink; color:#bf2c9f;",
-        workInProgress
-      );
+    // console.log(
+    //     "%c [  ]-47",
+    //     "font-size:13px; background:pink; color:#bf2c9f;",
+    //     workInProgress
+    //   );
       return workInProgress.child;
 }
 function updateFunctionComponent(current:Fiber|null,workInProgress:Fiber):Fiber|null{
