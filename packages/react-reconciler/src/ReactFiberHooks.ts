@@ -172,3 +172,42 @@ export function areHookInputsEqual(
   }
   return true;
 }
+
+export function useMemo<T>(
+  nextCreate: ()=>T,
+  deps: Array<unknown> | void | null
+){
+  const hook = updateWorkInProgress()
+  const nextDeps = deps === undefined ? null :deps
+  const prevState = hook.memorizedState
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<unknown> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps as any, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+  const nextValue = nextCreate();
+  hook.memorizedState = [nextValue, nextDeps];
+}
+export function useCallback<T>(
+  callback: T,
+  deps: Array<unknown> | void | null
+): T {
+  const hook = updateWorkInProgress();
+  const nextDeps = deps === undefined ? null : deps;
+
+  const prevState = hook.memorizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<unknown> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps as any, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+  hook.memorizedState = [callback, nextDeps];
+
+  return callback;
+}

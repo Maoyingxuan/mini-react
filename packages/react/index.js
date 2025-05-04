@@ -1,4 +1,4 @@
-import {useReducer, useEffect, useLayoutEffect } from "../react-reconciler"
+import {useReducer, useEffect, useLayoutEffect,useMemo } from "../react-reconciler"
 export {
-    useReducer,useEffect, useLayoutEffect 
+    useReducer,useEffect, useLayoutEffect ,useMemo
 }

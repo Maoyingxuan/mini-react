@@ -2,7 +2,7 @@
 // import { createRoot } from 'react-dom/client'
 
 import './index.css'
-import { ReactDOM, Component, useReducer,  useLayoutEffect, useEffect } from '../whichreact.ts'
+import { ReactDOM, Component, useReducer,  useLayoutEffect, useEffect, useMemo } from '../whichreact.ts'
 // import { useEffect } from 'react'
 // import { useLayoutEffect } from 'react';
 function FunctionComponent(props: {name: string}) {
@@ -13,6 +13,15 @@ function FunctionComponent(props: {name: string}) {
   useEffect(()=>{
     console.log('useEffect')
   },[count])
+  const expensive = useMemo(() => {
+    console.log("compute");
+    let sum = 0;
+    for (let i = 0; i < count; i++) {
+      sum += i;
+    }
+    return sum;
+    //只有count变化，这里才重新执行
+  }, [count]);
 return (
   <div
     className="border">
